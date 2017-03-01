@@ -8,14 +8,13 @@ using System.Text;
 using System.Security.Cryptography;
 using System.Threading;
 using DarkMultiPlayerServer;
-using 
+using MySql.Data;
 
 namespace DMPPlayerLogging
 {
     public class Main : DMPPlugin
     {
         //Settings file name
-
         private const string SETTINGS_FILE = "PlayerLoggingSettings.txt";
         //Uses explicit threads - The async methods whack out for some people in some rare cases it seems.
         //Plus, we can explicitly terminate the thread to kill the connection upon shutdown.
@@ -23,16 +22,18 @@ namespace DMPPlayerLogging
         //Settings
         PlayerLoggingSettings settingsStore = new PlayerLoggingSettings();
 
+        Dictionary<string, int> connectedPlayers = new Dictionary<string, int>();
+
         public Main()
         {
             loadThread = new Thread(new ThreadStart(LoadSettings));
             loadThread.Start();
             CommandHandler.RegisterCommand("reloadplayerlogging", ReloadSettings, "Reload the player logging settings");
+            DBConnect();
         }
 
         private void ReloadSettings(string args)
         {
-            loadedSettings = false;
             loadThread = new Thread(new ThreadStart(LoadSettings));
             loadThread.Start();
         }
@@ -103,7 +104,15 @@ namespace DMPPlayerLogging
 
         public override void OnClientAuthenticated(ClientObject client)
         {
-            //connectedPlayers.Add(client.playerName);
+            String timeStamp = DateTime.Now;
+
+            connectedPlayers.Add(client.playerName, );
+        }
+
+        public int GetTimeStamp()
+        {
+
+            return timeStamp;
         }
 
         public override void OnClientDisconnect(ClientObject client)
@@ -118,21 +127,25 @@ namespace DMPPlayerLogging
 
         private void DBConnect()
         {
-            SqlConnection dbh = new SqlConnection("server=" + settingsStore.sqlIP + ";" +
+            string connectionString = "server=" + settingsStore.sqlIP + ";" +
                                     "uid=" + settingsStore.dbUsername + ";" +
                                     "pwd=" + settingsStore.dbPassword + ";" +
-                                    "database=" + settingsStore.dbName + ";");
+                                    "database=" + settingsStore.dbName + ";";
+
+            MySql.Data.MySqlClient.MySqlConnection conn;
 
             try
             {
                 conn = new MySql.Data.MySqlClient.MySqlConnection();
-                conn.ConnectionString = myConnectionString;
+                conn.ConnectionString = connectionString;
                 conn.Open();
+                DarkLog.Debug("Connection to logging database successful");
             }
-            catch (MySql.Data.MySqlClient.MySqlException ex)
+            catch (MySql.Data.MySqlClient.MySqlException e)
             {
-                MessageBox.Show(ex.Message);
+                DarkLog.Error("Error connecting to logging database " + e);
             }
+
         }
     }
 }
