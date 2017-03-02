@@ -1,41 +1,46 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Security.Cryptography;
 using System.Threading;
 using DarkMultiPlayerServer;
-using MySql.Data;
+
 
 namespace DMPPlayerLogging
 {
     public class Main : DMPPlugin
     {
         //Settings file name
-        private const string SETTINGS_FILE = "PlayerLoggingSettings.txt";
-        //Uses explicit threads - The async methods whack out for some people in some rare cases it seems.
-        //Plus, we can explicitly terminate the thread to kill the connection upon shutdown.
-        private Thread loadThread;
-        //Settings
-        PlayerLoggingSettings settingsStore = new PlayerLoggingSettings();
+        protected const string SETTINGS_FILE = "PlayerLoggingSettings.txt";
 
-        Dictionary<string, int> connectedPlayers = new Dictionary<string, int>();
+        //Settings
+        public static PlayerLoggingSettings settingsStore = new PlayerLoggingSettings();
+
+        Dictionary<string, long> connectedPlayers = new Dictionary<string, long>();
 
         public Main()
         {
-            loadThread = new Thread(new ThreadStart(LoadSettings));
-            loadThread.Start();
+            LoadSettings();
             CommandHandler.RegisterCommand("reloadplayerlogging", ReloadSettings, "Reload the player logging settings");
-            DBConnect();
+
+            DBConnect connection = new DBConnect();
+
+            if(!connection.TableExists())
+            {
+                if (connection.CreateTable())
+                {
+                    DarkLog.Debug("DMPPlayerLogging: Created database table.");
+                }
+            }
+
+            connection.CloseConnection();
+
         }
 
         private void ReloadSettings(string args)
         {
-            loadThread = new Thread(new ThreadStart(LoadSettings));
-            loadThread.Start();
+            LoadSettings();
         }
 
         private void LoadSettings()
@@ -49,7 +54,7 @@ namespace DMPPlayerLogging
                     sw.WriteLine("dbName = ksp");
                     sw.WriteLine("dbUsername = kspgs");
                     sw.WriteLine("dbPassword = abc123");
-                    sw.WriteLine("tableName = tbl-player-logging");
+                    sw.WriteLine("tableName = tbl-player-sessions");
                 }
             }
             bool reloadSettings = false;
@@ -102,50 +107,39 @@ namespace DMPPlayerLogging
             }
         }
 
+        public PlayerLoggingSettings getSettings()
+        {
+            return settingsStore;
+        }
+            
         public override void OnClientAuthenticated(ClientObject client)
         {
-            String timeStamp = DateTime.Now;
+            long timeStamp = DarkMultiPlayerCommon.Common.GetCurrentUnixTime();
 
-            connectedPlayers.Add(client.playerName, );
-        }
-
-        public int GetTimeStamp()
-        {
-
-            return timeStamp;
+            connectedPlayers.Add(client.playerName, timeStamp);
+            DarkLog.Debug("DMPPlayerLogging: Added " + client.playerName + " to the list of tracked players.");
         }
 
         public override void OnClientDisconnect(ClientObject client)
         {
-            //connectedPlayers.Remove(client.playerName);
-        }
+            DBConnect connection = new DBConnect();
 
-        public override void OnServerStop()
-        {
-            
-        }
+            long connectTime = connectedPlayers[client.playerName];
+            long sessionDuration = DarkMultiPlayerCommon.Common.GetCurrentUnixTime() - connectTime;
 
-        private void DBConnect()
-        {
-            string connectionString = "server=" + settingsStore.sqlIP + ";" +
-                                    "uid=" + settingsStore.dbUsername + ";" +
-                                    "pwd=" + settingsStore.dbPassword + ";" +
-                                    "database=" + settingsStore.dbName + ";";
+            string sessionSendSQL = "INSERT INTO `"+ settingsStore.tableName + "` (`session_player_name`, `session_start_time`, `session_duration`) VALUES (@player_name, date_add('1970-01-01', INTERVAL @start SECOND), @duration)";
+            string[,] parameters = { { "@player_name", client.playerName }, { "@start", connectTime.ToString() }, { "@duration", sessionDuration.ToString() } };
 
-            MySql.Data.MySqlClient.MySqlConnection conn;
-
-            try
+            if (connection.NonQuery(sessionSendSQL, parameters))
             {
-                conn = new MySql.Data.MySqlClient.MySqlConnection();
-                conn.ConnectionString = connectionString;
-                conn.Open();
-                DarkLog.Debug("Connection to logging database successful");
+                connectedPlayers.Remove(client.playerName);
+                connection.CloseConnection();
+                DarkLog.Debug("DMPPlayerLogging: Successfully sent " + client.playerName + "'s to the logging server.");
             }
-            catch (MySql.Data.MySqlClient.MySqlException e)
+            else
             {
-                DarkLog.Error("Error connecting to logging database " + e);
+                DarkLog.Error("DMPPlayerLogging: Couldn't send session data to logging database.");
             }
-
         }
     }
 }

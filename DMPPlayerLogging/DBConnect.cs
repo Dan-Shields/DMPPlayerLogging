@@ -7,7 +7,7 @@ using MySql.Data.MySqlClient;
 
 namespace DMPPlayerLogging
 {
-    class DBConnect
+    public class DBConnect
     {
         protected MySqlConnection conn;
         protected MySqlCommand cmd;
@@ -26,7 +26,6 @@ namespace DMPPlayerLogging
                 conn.ConnectionString = connectionString;
                 conn.Open();
                 DarkLog.Debug("Connection to logging database successful");
-                conn.Close();
             }
             catch (MySqlException e)
             {
@@ -36,9 +35,9 @@ namespace DMPPlayerLogging
 
         public bool TableExists()
         {
-            string sqlQuery = "show tables like @table;";
+            string existsQuery = "show tables like @table;";
             string[,] parameters = { {"@table", settingsStore.tableName} };
-            if (Query(sqlQuery, parameters).HasRows == true)
+            if (Query(existsQuery, parameters).HasRows == true)
             {
                 return true;
             }
@@ -50,17 +49,10 @@ namespace DMPPlayerLogging
 
         public bool CreateTable()
         {
-            try
-            {
-                string creationSQL = "CREATE TABLE `ksp`.`"+ settingsStore.tableName +"` ( `session_id` INT NOT NULL AUTO_INCREMENT , `session_player_name` VARCHAR(32) NOT NULL , `session_start_time` TIMESTAMP NOT NULL , `session_length` INT NOT NULL , PRIMARY KEY (`session_id`)) ENGINE = InnoDB;";
-                string[,] parameters = { { } };
-                return NonQuery(creationSQL, parameters);
-            }
-            catch (MySqlException e)
-            {
-                DarkLog.Error("Error creating logging table " + e);
-                return false;
-            }
+            string creationSQL = "CREATE TABLE `ksp`.`"+ settingsStore.tableName +"` ( `session_id` INT NOT NULL AUTO_INCREMENT , `session_player_name` VARCHAR(32) NOT NULL , `session_start_time` TIMESTAMP NOT NULL , `session_duration` INT NOT NULL , PRIMARY KEY (`session_id`)) ENGINE = InnoDB;";
+            string[,] parameters = { { } };
+            return NonQuery(creationSQL, parameters);
+
         }
 
         public QueryResult Query(string query, string[,] parameters)
@@ -68,16 +60,12 @@ namespace DMPPlayerLogging
             try
             {
                 cmd = new MySqlCommand();
-                conn.Open();
                 cmd.Connection = conn;
 
                 cmd.CommandText = query;
 
-                DarkLog.Debug("Adding " + parameters.Length/2 + " parameters.");
-                
                 for (int i = 0; i < parameters.Length /2; i++)
                 {
-                    DarkLog.Debug("Adding parameter " + i);
                     cmd.Parameters.AddWithValue(parameters[i,0], parameters[i,1]);
                 }
 
@@ -86,7 +74,6 @@ namespace DMPPlayerLogging
                 MySqlDataReader reader = null;
 
                 reader = cmd.ExecuteReader();
-                conn.Close();
 
                 QueryResult result = new QueryResult();
                 result.HasRows = reader.HasRows;
@@ -122,23 +109,18 @@ namespace DMPPlayerLogging
             try
             {
                 cmd = new MySqlCommand();
-                conn.Open();
                 cmd.Connection = conn;
 
                 cmd.CommandText = query;
 
-                DarkLog.Debug("Adding " + parameters.Length/2 + " parameters.");
-
                 for (int i = 0; i < parameters.Length/2; i++)
                 {
-                    DarkLog.Debug("Adding parameter " + i);
                     cmd.Parameters.AddWithValue(parameters[i, 0], parameters[i, 1]);
                 }
 
                 cmd.Prepare();
 
                 cmd.ExecuteNonQuery();
-                conn.Close();
 
                 return true;               
 
@@ -148,6 +130,15 @@ namespace DMPPlayerLogging
                 DarkLog.Error("Error querying the logging database " + e);
                 return false;
             }
+        }
+
+        public void CloseConnection()
+        {
+            conn.Close();
+        }
+        public void OpenConnection()
+        {
+            conn.Open();
         }
     }
 
