@@ -1,4 +1,4 @@
-##Reports user sessions in a DMP back to a MySQL server for nefarious statistical purposes##
+##Reports user sessions in a DMP server (KSP multiplayer mod) back to a MySQL server for nefarious statistical purposes##
 ###Current Version: 0.1###
 
 ### Environment setup ###
