@@ -10,6 +10,6 @@
 
 ###End User Configuration###
 * Create a database and create a user to access this (or just use root if you're edgy like that).
-* Download the .dll from the [Downloads section](https://bitbucket.org/Dan_Shields/dmpplayerlogging/downloads/?tab=tags) and place in your 'DMP/plugins' folder
+* Download the .dll from the [Downloads section](https://bitbucket.org/Dan_Shields/dmpplayerlogging/downloads/?tab=downloads) and place in your 'DMP/plugins' folder
 * Run the server once, ignore the errors while it generates the settings file.
 * Close the server and edit the settings file to your heart's content.
