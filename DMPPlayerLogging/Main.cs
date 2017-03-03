@@ -17,7 +17,7 @@ namespace DMPPlayerLogging
         //Settings
         public static PlayerLoggingSettings settingsStore = new PlayerLoggingSettings();
 
-
+        //Dictionary for storing connected players (string name, long timeConnected)
         Dictionary<string, long> connectedPlayers = new Dictionary<string, long>();
 
         public Main()
@@ -29,7 +29,8 @@ namespace DMPPlayerLogging
 
             string existsQuery = "show tables like @table;";
             string[,] existsParameters = { { "@table", settingsStore.tableName } };
-            if (connection.Query(existsQuery, existsParameters).HasRows)
+
+            if (!connection.Query(existsQuery, existsParameters).HasRows)
             {
                 string creationSQL = "CREATE TABLE `ksp`.`" + settingsStore.tableName + "` ( `session_id` INT NOT NULL AUTO_INCREMENT , `session_player_name` VARCHAR(32) NOT NULL , `session_start_time` TIMESTAMP NOT NULL , `session_duration` INT NOT NULL , PRIMARY KEY (`session_id`)) ENGINE = InnoDB;";
                 string[,] creationParameters = { { } };
@@ -143,13 +144,14 @@ namespace DMPPlayerLogging
             if (connection.NonQuery(sessionSendSQL, parameters))
             {
                 connectedPlayers.Remove(client.playerName);
-                connection.CloseConnection();
                 DarkLog.Debug("DMPPlayerLogging: Successfully sent " + client.playerName + "'s to the logging server.");
             }
             else
             {
+                connectedPlayers.Remove(client.playerName);
                 DarkLog.Error("DMPPlayerLogging: Couldn't send session data to logging database.");
             }
+            connection.CloseConnection();
         }
     }
 }
