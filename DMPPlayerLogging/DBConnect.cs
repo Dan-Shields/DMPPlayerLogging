@@ -25,34 +25,12 @@ namespace DMPPlayerLogging
                 conn = new MySqlConnection();
                 conn.ConnectionString = connectionString;
                 conn.Open();
-                DarkLog.Debug("Connection to logging database successful");
+                DarkLog.Debug("DMPPlayerLogging: Connection to logging database successful");
             }
             catch (MySqlException e)
             {
-                DarkLog.Error("Error connecting to logging database " + e);
+                DarkLog.Error("DMPPlayerLogging: Error connecting to logging database " + e);
             }
-        }
-
-        public bool TableExists()
-        {
-            string existsQuery = "show tables like @table;";
-            string[,] parameters = { {"@table", settingsStore.tableName} };
-            if (Query(existsQuery, parameters).HasRows == true)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        public bool CreateTable()
-        {
-            string creationSQL = "CREATE TABLE `ksp`.`"+ settingsStore.tableName +"` ( `session_id` INT NOT NULL AUTO_INCREMENT , `session_player_name` VARCHAR(32) NOT NULL , `session_start_time` TIMESTAMP NOT NULL , `session_duration` INT NOT NULL , PRIMARY KEY (`session_id`)) ENGINE = InnoDB;";
-            string[,] parameters = { { } };
-            return NonQuery(creationSQL, parameters);
-
         }
 
         public QueryResult Query(string query, string[,] parameters)
@@ -97,7 +75,7 @@ namespace DMPPlayerLogging
             }
             catch (MySqlException e)
             {
-                DarkLog.Error("Error querying the logging database " + e);
+                DarkLog.Error("DMPPlayerLogging: Error querying the logging database " + e);
                 QueryResult result = new QueryResult();
                 result.Success = false;
                 return result;
@@ -127,7 +105,7 @@ namespace DMPPlayerLogging
             }
             catch (MySqlException e)
             {
-                DarkLog.Error("Error querying the logging database " + e);
+                DarkLog.Error("DMPPlayerLogging: Error querying the logging database " + e);
                 return false;
             }
         }
@@ -136,6 +114,7 @@ namespace DMPPlayerLogging
         {
             conn.Close();
         }
+
         public void OpenConnection()
         {
             conn.Open();

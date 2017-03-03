@@ -17,6 +17,7 @@ namespace DMPPlayerLogging
         //Settings
         public static PlayerLoggingSettings settingsStore = new PlayerLoggingSettings();
 
+
         Dictionary<string, long> connectedPlayers = new Dictionary<string, long>();
 
         public Main()
@@ -26,11 +27,20 @@ namespace DMPPlayerLogging
 
             DBConnect connection = new DBConnect();
 
-            if(!connection.TableExists())
+            string existsQuery = "show tables like @table;";
+            string[,] existsParameters = { { "@table", settingsStore.tableName } };
+            if (connection.Query(existsQuery, existsParameters).HasRows)
             {
-                if (connection.CreateTable())
+                string creationSQL = "CREATE TABLE `ksp`.`" + settingsStore.tableName + "` ( `session_id` INT NOT NULL AUTO_INCREMENT , `session_player_name` VARCHAR(32) NOT NULL , `session_start_time` TIMESTAMP NOT NULL , `session_duration` INT NOT NULL , PRIMARY KEY (`session_id`)) ENGINE = InnoDB;";
+                string[,] creationParameters = { { } };
+
+                if (connection.NonQuery(creationSQL, creationParameters))
                 {
                     DarkLog.Debug("DMPPlayerLogging: Created database table.");
+                }
+                else
+                {
+                    DarkLog.Error("DMPPlayerLogging: Logging table creation failed.");
                 }
             }
 
