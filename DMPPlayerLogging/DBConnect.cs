@@ -60,6 +60,7 @@ namespace DMPPlayerLogging
                 {
                     DataTable data = new DataTable();
                     data.Load(reader);
+                    reader.Close();
 
                     result.Success = true;
                     result.Data = data;
@@ -68,6 +69,7 @@ namespace DMPPlayerLogging
                 }
                 else
                 {
+                    reader.Close();
                     result.Success = true;
                     return result;
                 }
