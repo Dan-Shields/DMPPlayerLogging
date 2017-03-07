@@ -21,14 +21,17 @@ namespace DMPPlayerLogging
             LoadSettings();
             CommandHandler.RegisterCommand("reloadplayerlogging", ReloadSettings, "Reload the player logging settings");
 
+            //Connect to database
             DBConnect connection = new DBConnect();
 
+            //Check if table already exists
             string existsQuery = "show tables like @table;";
             string[,] existsParameters = { { "@table", settingsStore.tableName } };
 
             if (!connection.Query(existsQuery, existsParameters).HasRows)
             {
-                string creationSQL = "CREATE TABLE `ksp`.`" + settingsStore.tableName + "` ( `session_id` INT NOT NULL AUTO_INCREMENT , `session_player_name` VARCHAR(32) NOT NULL , `session_start_time` TIMESTAMP NOT NULL , `session_duration` INT NOT NULL , PRIMARY KEY (`session_id`)) ENGINE = InnoDB;";
+                //creates table
+                string creationSQL = "CREATE TABLE `ksp`.`" + settingsStore.tableName + "` ( `session_id` INT NOT NULL AUTO_INCREMENT , `session_player_name` VARCHAR(32) NOT NULL , `session_start_time` TIMESTAMP NOT NULL , `session_duration` INT NOT NULL , `session_end_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP , PRIMARY KEY (`session_id`)) ENGINE = InnoDB;";
                 string[,] creationParameters = { { } };
 
                 if (connection.NonQuery(creationSQL, creationParameters))
@@ -129,16 +132,20 @@ namespace DMPPlayerLogging
 
         public override void OnClientDisconnect(ClientObject client)
         {
+            //Connect to database
             DBConnect connection = new DBConnect();
 
+            //Grab session data from list
             long connectTime = connectedPlayers[client.playerName];
             long sessionDuration = DarkMultiPlayerCommon.Common.GetCurrentUnixTime() - connectTime;
 
+            //Send session to the database
             string sessionSendSQL = "INSERT INTO `"+ settingsStore.tableName + "` (`session_player_name`, `session_start_time`, `session_duration`) VALUES (@player_name, date_add('1970-01-01', INTERVAL @start SECOND), @duration)";
             string[,] parameters = { { "@player_name", client.playerName }, { "@start", connectTime.ToString() }, { "@duration", sessionDuration.ToString() } };
 
             if (connection.NonQuery(sessionSendSQL, parameters))
             {
+                //remove player from list
                 connectedPlayers.Remove(client.playerName);
                 DarkLog.Debug("DMPPlayerLogging: Successfully sent " + client.playerName + "'s to the logging server.");
             }
