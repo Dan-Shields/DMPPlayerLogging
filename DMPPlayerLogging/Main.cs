@@ -67,7 +67,6 @@ namespace DMPPlayerLogging
                     sw.WriteLine("tableName = tbl-player-sessions");
                 }
             }
-            bool reloadSettings = false;
             using (StreamReader sr = new StreamReader(settingsFileFullPath))
             {
                 string currentLine;
@@ -106,14 +105,10 @@ namespace DMPPlayerLogging
                     catch (Exception e)
                     {
                         DarkLog.Error("Error reading settings file, Exception " + e);
+                        File.Delete(settingsFileFullPath);
+                        LoadSettings();
                     }
                 }
-            }
-            if (reloadSettings)
-            {
-                //Load with the default settings if anything is incorrect.
-                File.Delete(settingsFileFullPath);
-                LoadSettings();
             }
         }
 
